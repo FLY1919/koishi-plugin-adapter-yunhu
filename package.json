@@ -9,14 +9,15 @@
     "dist"
   ],
   "license": "MIT",
-  "scripts": {},
   "keywords": [
     "chatbot",
     "koishi",
     "plugin"
   ],
-  "devDependencies": {},
   "peerDependencies": {
     "koishi": "4.18.7"
+  },
+  "dependencies": {
+    "formdata-node": "^6.0.3"
   }
 }

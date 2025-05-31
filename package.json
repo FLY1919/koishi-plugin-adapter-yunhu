@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-adapter-yunhu",
   "description": "云湖适配器",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
@@ -19,6 +19,7 @@
     "type": "git",
     "url": "https://github.com/WindyPear-Team/koishi-plugin-adapter-yunhu.git"
   },
+  "homepage": "https://doc.flweb.cn/koi/adapter-yunhu",
   "peerDependencies": {
     "koishi": "^4.18.7"
   },

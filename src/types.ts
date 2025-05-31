@@ -37,6 +37,7 @@ export interface Content {
   fileKey?: string       // contentType 为 file 时用
   videoKey?: string      // contentType 为 video 时用
   buttons?: Button[]     // 所有类型都可能有
+  at?: string[]        // 所有类型都可能有
 }
 
 export interface Button {

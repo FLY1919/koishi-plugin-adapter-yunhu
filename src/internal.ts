@@ -292,8 +292,10 @@ export default class Internal {
     }
   }
 
-  async recallMessage(msgId: string, chatId: string, chatType: 'group' | 'bot') {
+  async deleteMessage(chatId: string, msgId: string) {
+    const chatType = chatId.split(':')[1];
     const payload = { msgId, chatId, chatType }
+    logger.info(`撤回消息: ${JSON.stringify(payload)}`);
     return this.http.post(`/bot/recall?token=${this.token}`, payload)
   }
 }

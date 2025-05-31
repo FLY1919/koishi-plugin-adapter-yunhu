@@ -16,16 +16,23 @@ export class YunhuMessageEncoder<C extends Context> extends MessageEncoder<C, Yu
             contentType: 'text',
             content: {
                 text: ''
-            }
+            },
+            parentId: this.session.quote ? this.session.quote.id : undefined
         }
     }
 
     // 将发送好的消息添加到 results 中
     async addResult(data: any) {
-        const message = data
+        const message = data.data.messageInfo
         this.results.push(message)
         const session = this.bot.session()
         session.event.message = message
+        session.channelId = this.channelId
+        session.event.message.id = message.msgId
+        // session.quote.id = message.parentId? message.parentId : undefined
+        if(message.parentId) {
+            session.event.message.quote.id = message.parentId
+        }
         session.app.emit(session, 'send', session)
     }
 

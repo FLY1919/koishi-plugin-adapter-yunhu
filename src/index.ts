@@ -35,6 +35,9 @@ class YunhuBot<C extends Context = Context> extends Bot<C> {
 export class YunhuServer<C extends Context> extends Adapter<C, YunhuBot<C>> {
   async connect(bot: YunhuBot) {
     await this.initialize(bot)
+    this.ctx.on('send', (session) => {
+      logger.info(session)
+      logger.info(`New message: ${session.messageId} in channel: ${session.channelId}`);    })
 
     bot.ctx.server.post(bot.config.path, async (ctx) => {
       ctx.status = 200

@@ -132,6 +132,10 @@ export class YunhuMessageEncoder<C extends Context> extends MessageEncoder<C, Yu
                     this.payload.contentType = 'text'
                 }
             }
+            else if (type === 'markdown') {
+                this.payload.content.text += h.escape(attrs.content)
+                this.payload.contentType = 'markdown'
+            }
             else {
                 // 处理其他元素的子元素
                 await this.render(children)

@@ -27,7 +27,7 @@ class YunhuBot<C extends Context = Context> extends Bot<C> {
     const http = ctx.http.extend({
       endpoint: `${this.config.endpoint}${YUNHU_API_PATH}`,
     })
-    this.internal = new Internal(http, config.token)
+    this.internal = new Internal(http, config.token, `${this.config.endpoint}${YUNHU_API_PATH}`)
     ctx.plugin(YunhuServer, this)
   }
 }

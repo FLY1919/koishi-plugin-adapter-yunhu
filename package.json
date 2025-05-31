@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-adapter-yunhu",
   "description": "云湖适配器",
-  "version": "0.0.1",
+  "version": "1.1.0",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
@@ -14,10 +14,20 @@
     "koishi",
     "plugin"
   ],
+  "author": "WindyPear-Team",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/WindyPear-Team/koishi-plugin-adapter-yunhu.git"
+  },
   "peerDependencies": {
     "koishi": "4.18.7"
   },
   "dependencies": {
+    "fetch-blob": "^4.0.0",
+    "form-data-encoder": "^4.0.2",
     "formdata-node": "^6.0.3"
+  },
+  "devDependencies": {
+    "@types/mime-types": "^3.0.0"
   }
 }

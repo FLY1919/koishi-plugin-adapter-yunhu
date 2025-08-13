@@ -6,10 +6,12 @@ import { Context, h, Dict, MessageEncoder } from 'koishi'
 export class YunhuMessageEncoder<C extends Context> extends MessageEncoder<C, YunhuBot<C>> {
     // 使用 payload 存储待发送的消息
     private payload: Dict
+    private lockType: string
 
     // 在 prepare 中初始化 payload
     async prepare() {
         let [recvId, recvType] = this.channelId.split(':');
+        this.lockType = 'text';
         this.payload = {
             recvId,
             recvType,

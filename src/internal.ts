@@ -23,7 +23,7 @@ export default class Internal {
   }
 
 
-  async uploadImage(image: string | Buffer | any): Promise<string> {
+ async uploadImage(image: string | Buffer | any): Promise<string> {
   const form = new FormData()
   let fileName = 'image.png';
   let mimeType = 'image/png';
@@ -32,71 +32,72 @@ export default class Internal {
   // 添加图片压缩函数 - 确保压缩到10MB以下
   const compressImage = async (buffer: Buffer, originalMime: string): Promise<{ buffer: Buffer, mimeType: string }> => {
     const originalSize = buffer.length;
-    let compressBuffer = buffer;
-    let compressMime = originalMime;
-    let quality = 80; // 初始压缩质量
+    const originalMB = (originalSize / (1024 * 1024)).toFixed(2);
+    
+    // 记录原始图片信息
+    logger.info(`原始图片类型: ${originalMime}, 大小: ${originalMB}MB`);
+    
+    // 如果已经是10MB以下，直接返回（保持原格式）
+    if (originalSize <= MAX_SIZE) {
+      logger.info(`图片小于10MB，保持原始格式`);
+      return { buffer, mimeType: originalMime };
+    }
+
+    logger.warn(`检测到大图片（${originalMB}MB），开始压缩...`);
     
     try {
-      // 如果原始图片已经小于10MB，直接返回
-      if (originalSize <= MAX_SIZE) {
-        return { buffer, mimeType: originalMime };
-      }
+      let compressBuffer = buffer;
+      let compressMime = originalMime;
+      let sharpInstance = sharp(buffer);
 
-      // 记录原始大小
-      const originalMB = (originalSize / (1024 * 1024)).toFixed(2);
-      logger.warn(`检测到大图片（${originalMB}MB），开始压缩...`);
-      
-      // 初始压缩
-      compressBuffer = await sharp(buffer)
-        .jpeg({ quality, progressive: true }) // 默认转为JPEG
-        .toBuffer();
-      compressMime = 'image/jpeg';
-      
-      // 逐步降低质量直到满足要求
-      while (compressBuffer.length > MAX_SIZE && quality > 30) {
-        quality -= 5; // 小步长降低质量
-        compressBuffer = await sharp(compressBuffer)
-          .jpeg({ quality })
-          .toBuffer();
-      }
-      
-      // 如果仍然过大，调整尺寸
-      if (compressBuffer.length > MAX_SIZE) {
-        const metadata = await sharp(compressBuffer).metadata();
-        const currentMB = (compressBuffer.length / (1024 * 1024)).toFixed(2);
-        logger.warn(`质量压缩后仍为${currentMB}MB，尝试调整尺寸...`);
-        
-        // 计算需要缩小的比例 (目标大小/当前大小)
-        const sizeRatio = Math.sqrt(MAX_SIZE / compressBuffer.length);
-        const newWidth = Math.floor((metadata.width || 1920) * sizeRatio);
-        const newHeight = Math.floor((metadata.height || 1080) * sizeRatio);
-        
-        compressBuffer = await sharp(compressBuffer)
-          .resize(newWidth, newHeight)
-          .jpeg({ quality: Math.max(quality, 70) }) // 保持质量
-          .toBuffer();
-      }
-
-      // 最终检查，确保在10MB以下
-      let attempts = 0;
-      while (compressBuffer.length > MAX_SIZE && attempts < 3) {
-        quality -= 5;
-        compressBuffer = await sharp(compressBuffer)
-          .jpeg({ quality })
-          .toBuffer();
-        attempts++;
-      }
-      
-      // 记录压缩结果
-      const compressedMB = (compressBuffer.length / (1024 * 1024)).toFixed(2);
-      if (compressBuffer.length <= MAX_SIZE) {
-        logger.warn(`图片已压缩至${compressedMB}MB`);
+      // 动图保持原格式压缩
+      const isGif = originalMime.includes('gif');
+      if (!isGif) {
+        // 非动图转换为JPG格式
+        compressMime = 'image/jpeg';
+        sharpInstance = sharpInstance.jpeg({ 
+          quality: 80, 
+          progressive: true,
+          mozjpeg: true  // 启用更高效的JPEG压缩
+        });
+        logger.info(`非动图类型，转换为JPG格式压缩`);
       } else {
-        const finalMB = (compressBuffer.length / (1024 * 1024)).toFixed(2);
-        logger.error(`压缩失败！最终大小${finalMB}MB仍超过10MB限制`);
+        logger.info(`动图类型，保持GIF格式压缩`);
+      }
+
+      // 计算缩放比例
+      const targetRatio = Math.sqrt(MAX_SIZE / originalSize) * 0.95; // 留5%缓冲
+      
+      // 获取原始尺寸
+      const metadata = await sharp(buffer).metadata();
+      const originalWidth = metadata.width || 1920;
+      const originalHeight = metadata.height || 1080;
+      
+      // 计算新尺寸
+      const newWidth = Math.floor(originalWidth * targetRatio);
+      const newHeight = Math.floor(originalHeight * targetRatio);
+      
+      logger.info(`一次性压缩尺寸: ${originalWidth}x${originalHeight} -> ${newWidth}x${newHeight}`);
+
+      // 执行压缩
+      compressBuffer = await sharpInstance
+        .resize(newWidth, newHeight)
+        .toBuffer();
+
+      // 记录压缩结果
+      const compressedSize = compressBuffer.length;
+      const compressedMB = (compressedSize / (1024 * 1024)).toFixed(2);
+      
+      if (compressedSize <= MAX_SIZE) {
+        logger.info(`压缩成功！大小: ${compressedMB}MB, 格式: ${compressMime}`);
+        return { buffer: compressBuffer, mimeType: compressMime };
       }
       
-      return { buffer: compressBuffer, mimeType: compressMime };
+      // 如果仍超过限制（极少数情况）
+      const finalMB = (compressedSize / (1024 * 1024)).toFixed(2);
+      logger.error(`压缩后图片仍超过限制 (${finalMB}MB)`);
+      throw new Error(`无法将图片压缩至10MB以下`);
+      
     } catch (error) {
       logger.error('图片压缩失败:', error);
       throw new Error('图片压缩失败，无法上传');
@@ -160,43 +161,43 @@ export default class Internal {
     throw new Error('上传图片只支持路径、URL、base64、Buffer 或 h.Element 类型');
   }
 
+  // 记录原始图片信息
+  const originalSize = imageBuffer.length;
+  const originalMB = (originalSize / (1024 * 1024)).toFixed(2);
+  logger.info(`准备上传图片: 类型=${mimeType}, 大小=${originalMB}MB`);
+  
   // 强制压缩超过10MB的图片
-  if (imageBuffer && imageBuffer.length > MAX_SIZE) {
+  if (originalSize > MAX_SIZE) {
     const result = await compressImage(imageBuffer, mimeType);
-    
-    // 确保压缩后不超过10MB
-    if (result.buffer.length > MAX_SIZE) {
-      throw new Error('无法将图片压缩至10MB以下');
-    }
-    
     imageBuffer = result.buffer;
     mimeType = result.mimeType;
     
-    // 更新文件名为JPEG格式
+    // 更新文件名为正确格式
     if (mimeType === 'image/jpeg') {
       fileName = fileName.replace(/\.[^.]+$/, '.jpg');
+    } else if (mimeType.includes('gif')) {
+      fileName = fileName.replace(/\.[^.]+$/, '.gif');
     }
   }
 
   // 创建文件对象
   const file = new File([imageBuffer], fileName, { type: mimeType });
-  form.append('image', file);
-
+  
   // 最终大小验证
   if (file.size > MAX_SIZE) {
     const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
     throw new Error(`压缩失败！图片大小${sizeMB}MB仍超过10MB限制`);
   }
+  
+  // 记录最终上传信息
+  const finalMB = (file.size / (1024 * 1024)).toFixed(2);
+  logger.info(`最终上传图片: 类型=${mimeType}, 大小=${finalMB}MB`);
+  
+  form.append('image', file);
 
   // 上传逻辑保持不变
   try {
-    for (const [key, value] of form.entries()) {
-      // logger.info('图片字段:', key);
-      // logger.info('图片值:', value);
-    }
-
     const uploadUrl = `${this.apiendpoint}/image/upload?token=${this.token}`;
-    // logger.info(`尝试使用 axios 发送图片请求到: ${uploadUrl}`);
 
     const axiosConfig: AxiosRequestConfig = {
       headers: {},
@@ -210,6 +211,8 @@ export default class Internal {
     if (res.code !== 1) {
       throw new Error(`图片上传失败：${res.msg}，响应码${res.code}`);
     }
+    
+    logger.info(`图片上传成功: key=${res.data.imageKey}`);
     return res.data.imageKey;
 
   } catch (error: any) {
@@ -225,7 +228,6 @@ export default class Internal {
     throw new Error(`图片上传失败：${error.message}`);
   }
 }
-
   async uploadVideo(video: string | Buffer | any): Promise<string> {
     const form = new FormData();
     let fileName = 'video.mp4';

@@ -28,7 +28,8 @@
     "fetch-blob": "^4.0.0",
     "form-data-encoder": "^4.0.2",
     "formdata-node": "^6.0.3",
-    "mime-types": "^3.0.1"
+    "mime-types": "^3.0.1",
+    "sharp": "^0.34.3"
   },
   "devDependencies": {
     "@types/mime-types": "^3.0.0"
